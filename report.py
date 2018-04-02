@@ -57,3 +57,33 @@ def top_authors(cursor, limit=3):
     cursor.execute(query, (limit,))
     data = cursor.fetchall()
     pprint(data)
+
+
+@connect
+def dates_with_errors_more_than(cursor, percent=1):
+    query = '''
+        SELECT to_char(date, 'Mon, DD, YYYY'),
+               concat(error_percent, '%%')
+        FROM (
+            SELECT time::date AS date, round(sum(
+                CASE status
+                    WHEN '200 OK' THEN 0
+                    ELSE 1.0
+                END
+            ) * 100 / count(*), 2) AS error_percent
+            FROM log
+            GROUP BY date
+        ) AS subquery
+        WHERE error_percent > %s;
+    '''
+    cursor.execute(query, (percent,))
+    data = cursor.fetchall()
+    pprint(data)
+
+
+if __name__ == '__main__':
+    top_articles(5)
+    print()
+    top_authors(5)
+    print()
+    dates_with_errors_more_than(.76)
